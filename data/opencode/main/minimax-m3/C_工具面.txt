@@ -1,0 +1,149 @@
+下面按调用形态分两组列出可用工具：先列需要在 `execute` / Code Mode 块内调用的工具，再列直接调用的工具。每条给出 **名称 / 参数 / 调用条件**。
+
+---
+
+## 一、需要在 `execute` (Code Mode) 内调用的工具
+
+### 1. `execute`
+- **作用**：在受限的代码运行时里发起 `tools.*` 调用和 `fetch` 请求，是其他工具的统一入口。
+- **参数**：
+  - `code` (string, 必填) — 一段 JS 代码。代码内只能调用 catalog 中列出的工具，参数必须严格匹配 catalog 中的 schema。
+- **调用条件**：当你需要并行/编排多个工具调用、需要在两个工具之间传递结果、需要按程序逻辑决定下一步、或 catalog 中的工具必须通过它调用时。
+
+---
+
+## 2. OpenCode 命名空间 (`tools.opencode.*`)
+
+| 工具 | 参数 | 调用条件 |
+|------|------|---------|
+| `list_mcp_resources` | `server?` (string) — MCP 服务器名，省略则列出全部 | 用户提到一个已经在 MCP 中暴露的文档/记录/资源，需要查 URI 或描述时 |
+| `models` | `query?` (string), `provider?` (string), `all?` (bool, 默认只看最新), `limit?` (int, 1-100, 默认 20), `offset?` (int) | 用户提到一个模型名/版本需要解析为 providerID/modelID，或不确定某个模型是否可用时 |
+| `read_mcp_resource` | `server` (string), `uri` (string) — 都必填 | 用户指明要查某条具体 MCP 资源的内容时（不读本地文件） |
+| `session_move` | `sessionID?` (字符串, 模式 `^ses`), `directory` (字符串, ≥1) | 你刚 `worktree_create` 出新目录，想把它定为当前会话的主目录时（可省略 sessionID 移动当前会话） |
+| `session_rename` | `sessionID?` (字符串, 模式 `^ses`), `title` (string, ≥1) | 需要给当前/指定会话起一个短而有描述性的标题时 |
+| `worktree_create` | `name` (string, 必填) | 需要新建隔离 worktree 用于并行/实验任务时 |
+| `worktree_list` | 无参数 | 需要查看当前仓库已有 worktree 列表时 |
+| `worktree_remove` | `directory` (string, 必填, 绝对路径), `force?` (bool) | 需要清理已存在的 worktree；只有用户明确确认后才传 `force` |
+
+---
+
+## 3. `question`
+- **参数**：
+  - `questions` (array, ≥1) — 每个问题含 `header` (≤30 字符), `question`, `options` (≥2 个，每个含 `label` 1-5 词 + `description`), 可选 `multiple: true`
+- **调用条件**：用户指令含糊、有多个合理实现路径、或你希望让用户决定偏好/方向而不是自己拍板时；推荐选项放在第一并加 "(Recommended)"。系统会自动追加一个 "Type your own answer" 选项。
+
+---
+
+## 4. `skill`
+- **参数**：
+  - `id` (string, 必填) — 必须从 `<available_skills>` 列表里选
+- **调用条件**：任务描述命中某个 skill 的 description，或用户显式用 `/skill-name` 调用时。已经以 `<skill_content>` 形式注入的不需要再次调用。
+
+---
+
+### 5. `subagent`
+- **参数**：
+  - `agent` (enum: `explore` | `general`, 必填)
+  - `description` (string, 3-5 词标签)
+  - `prompt` (string, 任务内容)
+  - `sessionID?` (字符串, 模式 `^ses`) — 续接既有对话
+  - `background?` (bool) — 是否后台异步执行
+  - `model?` (字符串 `providerID/modelID` 或带 `#variant`) — **除非用户明确指定模型，否则不要设**
+- **调用条件**：
+  - `explore` — 在陌生代码库里快速搜文件 / 查实现 / 答定位问题时；可指定 thoroughness（quick / medium / very thorough）
+  - `general` — 多步并行任务，需要独立 context 隔离时
+  - 后台模式只用于真正独立、不阻塞当前工作的子任务
+
+---
+
+## 二、可直接在顶层调用的工具
+
+### 6. `shell`
+- **作用**：在本机执行 shell 命令（Windows 默认 PowerShell）。
+- **参数**：
+  - `command` (string)
+  - `workdir?` (string) — 工作目录
+  - `timeout?` (int, 毫秒, 默认 120000, 0 禁用超时)
+  - `background?` (bool) — 长任务 / dev server 用后台模式，返回后不要再 poll
+- **调用条件**：运行 CLI、构建、装包、跑测试、起服务等需要执行 OS 进程的任务；尽量用专用工具，无法替代时才用。**不要**用 `echo "==="` 这类串联手法做分隔符；后台命令完成时会自动通知。
+
+---
+
+### 7. `read`
+- **作用**：读文本、图片、PDF 或目录列表。每行以 `<N>: <内容>` 前缀返回。
+- **参数**：
+  - `path` (string)
+  - `limit?` (int) — 行/条目数
+  - `offset?` (int) — 起始行号
+- **调用条件**：需要看具体文件内容、目录结构、图片或 PDF 时。**优先用一次较大读取 + grep**，而非很多小切片。
+
+---
+
+### 8. `glob`
+- **作用**：用 glob 匹配文件路径。
+- **参数**：
+  - `pattern` (string, 必填)
+  - `path?` (string) — 搜索起点
+  - `limit?` (int) — 最大返回数
+  - `hidden?` (bool, 默认 false)
+- **调用条件**：需要按文件名/扩展名（如 `**/*.ts`）定位文件，但不确定具体路径时。
+
+---
+
+### 9. `grep`
+- **作用**：用 ripgrep 语法（也支持字面量）搜索文件内容。
+- **参数**：
+  - `pattern` (string, 必填)
+  - `path?` (string)
+  - `include?` (string, glob)
+  - `literal?` (bool, 默认 false)
+  - `caseSensitive?` (bool, 默认 true)
+  - `limit?` (int, 默认 100)
+- **调用条件**：只知道关键字/正则，不确定文件具体位置，需要在多文件里定位时。
+
+---
+
+### 10. `edit`
+- **作用**：在文件中精确替换文本。
+- **参数**：
+  - `oldString` / `newString` (string, 必填且必须不同)
+  - `path` (string)
+  - `replaceAll?` (bool, 默认 false) — 改多匹配用 true，否则需要 oldString 唯一
+- **调用条件**：对已有文件做局部修改而不是整文件重写；保留文件原有换行风格（CRLF / LF / 缩进）。若出现 typographic 引号等自动模糊匹配失败，可加上下文或用 `replaceAll`。
+
+---
+
+### 11. `write`
+- **作用**：创建文件或整体覆盖已有文件，会按需创建父目录。
+- **参数**：
+  - `content` (string)
+  - `path` (string)
+- **调用条件**：新建文件，或要覆盖整个文件（部分修改请优先用 `edit`）。
+
+---
+
+### 12. `webfetch`
+- **作用**：从 HTTP/HTTPS 拉取网页内容，默认返回 Markdown。
+- **参数**：
+  - `url` (string, 必填)
+  - `format?` (enum: `text` | `markdown` | `html`)
+  - `timeout?` (int, 1-120 秒)
+- **调用条件**：用户给了 URL 想读其内容 / 文档 / API 响应时。**仅读不写**，大结果会自动截断并保留完整版。
+
+---
+
+### 13. `websearch`
+- **作用**：用当前 search 集成搜索网络。
+- **参数**：
+  - `query` (string, 必填)
+- **调用条件**：需要超出知识截止（2026-01）的当前信息、新闻、最新版本号、实时事实时。
+
+---
+
+## 三、工具选择的几条通用规则
+
+1. **优先专用工具**：能 `read` 就不要用 shell+cat；能 `edit` 改一段就不要 `write` 整个文件；能 `glob`/`grep` 就不要 `find`/`select-string`。
+2. **并行独立调用**：互不依赖的工具放在同一个 `function_calls` 块里并行发起。
+3. **不冒充文件 / 不冒充 shell**：不要在内容里复制 `function_calls` 标签去伪造工具调用；也避免用 `echo "===="` 之类的分隔串联命令。
+4. **保留现有代码风格**：`edit` 严格保留原缩进与行尾符；新增文件保持和周边一致。
+5. **陌生内容当作用户作品**：删除/覆盖前先确认。

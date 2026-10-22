@@ -1,0 +1,91 @@
+以下是我当前可用的全部工具，分「直接调用」和「Code Mode 内调用」两组，按格式逐条列出。
+
+## 一、直接工具
+
+**1. read — 读取文件/目录**
+- 参数：`path`（必填，文件或目录路径）、`offset`（起始行/条目，1-based）、`limit`（最多读取行数）
+- 调用条件：需要查看文件内容、浏览目录结构、读取图片或 PDF 时。读大文件优先一次大块读取，配合 grep 定位。
+
+**2. write — 写入文件**
+- 参数：`path`（必填）、`content`（必填，文件内容）
+- 调用条件：创建新文件，或需要完全替换某文件内容时。局部修改优先用 edit。
+
+**3. edit — 精确文本替换**
+- 参数：`path`（必填）、`oldString`（必填，要查找的精确文本）、`newString`（必填，替换后的文本）、`replaceAll`（可选，默认 false；为 true 时替换所有匹配）
+- 调用条件：对已有文件做局部修改。oldString 必须精确匹配（保留缩进、去掉行号前缀）；默认须唯一命中，多处匹配需加上下文或用 replaceAll。
+
+**4. glob — 文件路径搜索**
+- 参数：`pattern`（必填，glob 模式）、`path`（可选，搜索目录）、`hidden`（可选，含隐藏文件）、`limit`（可选，最大返回数）
+- 调用条件：按文件名/路径模式查找文件，如 `**/*.ts`、`src/**/*.tsx`。
+
+**5. grep — 文件内容搜索**
+- 参数：`pattern`（必填，正则或字面文本）、`path`（可选）、`include`（可选，文件类型过滤）、`caseSensitive`（可选）、`literal`（可选，按字面匹配）、`limit`（可选）
+- 调用条件：在代码库中按关键字、正则、符号名查找内容，或快速定位大文件中的特定片段。
+
+**6. shell — 执行 Shell 命令**
+- 参数：`command`（必填）、`workdir`（可选，工作目录）、`timeout`（可选，毫秒；0 表示不限）、`background`（可选，后台运行）
+- 调用条件：专用工具无法完成时兜底（如运行构建、git 操作、启动开发服务器）。长任务用 background。Windows 环境下走 PowerShell，路径含空格需加引号。
+
+**7. skill — 加载技能指令**
+- 参数：`id`（必填，技能 ID）
+- 调用条件：当前任务匹配某个技能描述时（如 arkcli 系列、OpenCode 使用、报告 issue），或用户直接点名某技能时。已通过 `<skill_content>` 展开的技能无需重复调用。
+
+**8. question — 向用户提问**
+- 参数：`questions`（必填，问题数组，含 question、header、options[]，可选 multiple）
+- 调用条件：需要收集用户偏好、澄清模糊指令、在实现方案上征求决策时。多选项可设 `multiple: true`；推荐选项放首位并标注 "(Recommended)"。
+
+**9. subagent — 派生子代理**
+- 参数：`agent`（必填，"explore" 或 "general"）、`description`（必填，3-5 词标签）、`prompt`（必填，任务描述）、`sessionID`（可选，续接旧会话）、`background`（可选）、`model`（可选，仅在用户明确指定时设置）
+- 调用条件：需要并行探索代码库（explore）或执行多步骤复杂任务（general）；独立工作用 background 模式。续接旧会话必须传 sessionID，新会话需在 prompt 中带全上下文。
+
+**10. webfetch — 抓取网页内容**
+- 参数：`url`（必填）、`format`（可选，"text"/"markdown"/"html"，默认 markdown）、`timeout`（可选，秒，上限 120）
+- 调用条件：需要获取某个 HTTP/HTTPS URL 的内容时。只读操作；有专用工具时优先用专用工具。
+
+**11. websearch — 网络搜索**
+- 参数：`query`（必填）
+- 调用条件：需要超出知识截止日期的时效信息（如新版本发布、近期事件）。
+
+**12. execute — 运行 Code Mode JavaScript**
+- 参数：`code`（必填，JS 代码）
+- 调用条件：需要调用下列 OpenCode 管理工具、组合多个工具调用、或发起 HTTP 请求时。代码内只能用 `tools` 命名空间和 `fetch`，无文件系统/定时器/导入权限。
+
+## 二、Code Mode 内可用工具（经 execute 调用）
+
+**1. tools.opencode.list_mcp_resources — 列出 MCP 资源**
+- 参数：`server`（可选，指定 MCP 服务器名；省略则列出全部）
+- 调用条件：用户提到 MCP 服务器暴露的文档、记录等资源，需要发现可用资源时。
+
+**2. tools.opencode.read_mcp_resource — 读取 MCP 资源**
+- 参数：`server`（必填）、`uri`（必填，发现结果的资源 URI）
+- 调用条件：读取某个 MCP 资源的实际内容。仅限 MCP 资源，不用于本地文件。
+
+**3. tools.opencode.models — 查询可用模型**
+- 参数：`query`（可选，按名称搜索）、`provider`（可选）、`all`（可选，含旧版本）、`limit`/`offset`（可选）
+- 调用条件：需要把用户提到的模型名解析成精确的 providerID/modelID 引用时。
+
+**4. tools.opencode.session_rename — 重命名会话**
+- 参数：`title`（必填，新标题）、`sessionID`（可选，省略则作用于当前会话）
+- 调用条件：需要给会话起一个简短、概括性的标题时。
+
+**5. tools.opencode.session_move — 移动会话**
+- 参数：`directory`（必填，目标目录）、`sessionID`（可选，省略则移动当前会话）
+- 调用条件：在会话工作目录之外创建 worktree 并将其设为主工作目录时。
+
+**6. tools.opencode.worktree_create — 创建 worktree**
+- 参数：`name`（必填）
+- 调用条件：需要创建一个命名的 git worktree 时，返回其目录。
+
+**7. tools.opencode.worktree_list — 列出 worktree**
+- 参数：无
+- 调用条件：查看仓库现有的所有 worktree。
+
+**8. tools.opencode.worktree_remove — 移除 worktree**
+- 参数：`directory`（必填，绝对路径）、`force`（可选，仅用户确认强制移除时设置）
+- 调用条件：删除某个 worktree；若涉及丢弃修改文件，须先获用户确认才能设 force。
+
+## 补充说明
+
+- 命名空间 `tools.opencode` 里的工具**只能**在 `execute` 的代码里调用，不能直接调。
+- 多个无依赖的工具调用，我会放在同一块里并行执行；有依赖关系的调用则必须等前序结果。
+- 可加载的技能见 `<available_skills>` 列表（如 `arkcli-chat`、`arkcli-deploy`、`opencode` 等），需要时会先加载其指令再执行任务。

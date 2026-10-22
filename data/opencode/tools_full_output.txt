@@ -1,0 +1,68 @@
+[0m
+> build · doubao-seed-2-1-pro
+下面按工具逐条列出（参数标注 *必填* 的为必选项，其余为可选）。
+
+## 1. edit — 编辑文件
+- **参数**
+  - `path` *(string, 必填)*：要编辑的文件路径
+  - `oldString` *(string, 必填)*：要查找替换的精确原文
+  - `newString` *(string, 必填)*：替换后的文本（必须与 oldString 不同）
+  - `replaceAll` *(boolean, 默认 false)*：是否替换全部匹配项
+- **调用条件**：对已存在的文本文件做**局部、精准**修改时。需要保留缩进；oldString 默认必须唯一匹配，多处匹配时要么补充上下文，要么设 replaceAll。完全重写文件用 write。
+
+## 2. glob — 按路径模式搜索文件
+- **参数**
+  - `pattern` *(string, 必填)*：glob 模式，如 `**/*.ts`
+  - `path` *(string)*：搜索目录，默认当前工作目录
+  - `hidden` *(boolean, 默认 false)*：是否包含隐藏文件/目录
+  - `limit` *(integer, >0, 默认 100)*：返回文件数上限
+- **调用条件**：需要按文件名/路径模式找文件（而非文件内容）时。
+
+## 3. grep — 搜索文件内容
+- **参数**
+  - `pattern` *(string, 必填, 最少 1 字符)*：正则表达式或字面文本
+  - `path` *(string)*：文件或目录，默认当前工作目录
+  - `include` *(string)*：文件名 glob 过滤，如 `*.js`
+  - `literal` *(boolean, 默认 false)*：是否按字面文本匹配
+  - `caseSensitive` *(boolean, 默认 true)*：是否区分大小写
+  - `limit` *(integer, >0, 默认 100)*：返回行数上限
+- **调用条件**：在文件内容中定位某个符号、关键字或代码模式时。
+
+## 4. question — 向用户提问
+- **参数**
+  - `questions` *(array, 必填, ≥1 项)*，每项含：
+    - `question` *(string, 必填)*：完整问题
+    - `header` *(string, 必填)*：≤30 字符的短标签
+    - `options` *(array, 必填)*：选项数组，每项含 `label`（1–5 词）和 `description`
+    - `multiple` *(boolean)*：是否允许多选
+- **调用条件**：需要澄清歧义、收集偏好、让用户在实现方案中做选择时。会自动附加"自行输入答案"选项，无需自己加。
+
+## 5. read — 读取文件或目录
+- **参数**
+  - `path` *(string, 必填)*：文件或目录路径
+  - `offset` *(integer, ≥1)*：起始行/条目
+  - `limit` *(integer, ≥1, 默认/上限 2000)*：读取行数/条目数
+- **调用条件**：查看文件内容、目录条目，或读取图片/PDF 时。大文件优先一次大段读取，配合 grep 定位。
+
+## 6. shell — 执行 shell 命令
+- **参数**
+  - `command` *(string, 必填)*：要执行的命令（当前环境为 Windows PowerShell）
+  - `workdir` *(string)*：工作目录，默认当前目录
+  - `timeout` *(integer, ≥0, 默认 120000ms)*：超时时间，0 为不限时
+  - `background` *(boolean, 默认 false)*：是否后台运行（无超时，完成时通知）
+- **调用条件**：专用工具无法完成需要时（如运行构建、git 操作、启动开发服务器）。不要用 `echo`/`printf` 等分隔符串联命令；后台命令不要轮询。
+
+## 7. skill — 加载专用技能
+- **参数**
+  - `id` *(string, 必填)*：技能 ID（如 `arkcli-models`、`opencode`、`report`）
+- **调用条件**：任务匹配某个可用技能的描述时（如管理火山方舟资源、处理 OpenCode 本身问题、上报 bug）。已加载的技能无需重复调用。
+
+## 8. subagent — 派生子代理
+- **参数**
+  - `agent` *(string, 必填)*：类型，`explore`（代码库探索）或 `general`（通用多步任务）
+  - `description` *(string, 必填)*：3–5 个词的任务标签
+  - `prompt` *(string, 必填)*：任务说明（新会话需包含全部相关上下文）
+  - `model` *(string)*：模型 ID，**仅当用户明确指定时**填写
+  - `sessionID` *(string, 形如 ses...)*：续写之前的子代理会话
+  - `background` *(boolean, 默认 false)*：是否后台异步运行
+- **调用条件**：需要快速探索代码库（explore，可选 quick/medium/very thorough），或并行执行独立的多步研究�

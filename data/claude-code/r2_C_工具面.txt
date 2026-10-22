@@ -1,0 +1,95 @@
+我当前会话中可调用的工具共 **22 个**。下面按「名称 / 参数 / 调用条件」逐条列出。参数中标 `*` 为必填，其余为可选。
+
+---
+
+**1. Agent**
+- 参数：`description*`（3–5 词任务描述）、`prompt*`（完整任务指令）、`subagent_type`（claude / Explore / general-purpose / Plan / statusline-setup）、`model`（sonnet / opus / haiku / fable）、`isolation`（worktree / remote）、`run_in_background`（默认 true）。
+- 调用条件：需要把多文件搜索、跨文件调研或多步独立任务交给子代理时；多个互不依赖的任务应在同一条消息里并行派发。仅当下一步动作必须立刻依赖结果时才设 `run_in_background: false`。
+
+**2. Bash**
+- 参数：`command*`、`description*`（动作的平实描述）、`timeout`（毫秒，前台最大 600000）、`run_in_background`、`dangerouslyDisableSandbox`。
+- 调用条件：需要执行 shell 命令（git、构建、测试、安装依赖、运行程序）且没有更专用的工具可替代时。优先用 Read/Grep/Glob 而非 `cat`/`grep`/`find`。
+
+**3. CronCreate**
+- 参数：`cron*`（5 段式本地时间）、`prompt*`（触发时入队的提示）、`recurring`（默认 true）、`durable`（默认 false，仅写入 `.claude/scheduled_tasks.json` 时用）。
+- 调用条件：用户要求定时/周期性执行某任务，或「X 分钟后提醒我」。非持久化任务默认只存在于本会话；周期任务 7 天后自动过期。
+
+**4. CronDelete**
+- 参数：`id*`（CronCreate 返回的任务 ID）。
+- 调用条件：用户要求取消某个已排期的定时任务时。
+
+**5. CronList**
+- 参数：无。
+- 调用条件：需要查看当前已排期的定时任务（含持久化与会话内）时。
+
+**6. Edit**
+- 参数：`file_path*`、`old_string*`、`new_string*`、`replace_all`（默认 false）。
+- 调用条件：对已读入上下文的文件做精确字符串替换。`old_string` 必须唯一匹配，否则失败；多处替换用 `replace_all`。
+
+**7. EnterWorktree**
+- 参数：`name`（新 worktree 名）、`path`（进入已存在的 worktree）；二者互斥。
+- 调用条件：**仅当**用户明确说“worktree”，或 CLAUDE.md/记忆明确要求时才用。普通分支切换、修 bug 不应使用。
+
+**8. ExitWorktree**
+- 参数：`action*`（keep / remove）、`discard_changes`（仅 remove 时有意义，默认 false）。
+- 调用条件：用户明确要求退出 worktree 时；不主动调用。有未提交改动时 remove 会被拒绝，需确认后再加 `discard_changes: true`。
+
+**9. Glob**
+- 参数：`pattern*`（如 `**/*.ts`）、`path`（搜索目录）。
+- 调用条件：按文件名/路径模式查找文件，结果按修改时间排序。已知具体文件时不必用。
+
+**10. Grep**
+- 参数：`pattern*`（ripgrep 正则）、`path`、`glob`、`type`、`output_mode`（content / files_with_matches / count）、`-i`、`-n`、`-o`、`-A`、`-B`、`-C`、`context`、`multiline`、`head_limit`、`offset`。
+- 调用条件：按文件内容检索。优先于 `grep`/`rg` 的 shell 调用，便于权限与结果展示集成。
+
+**11. ListAgents**
+- 参数：`channel`、`q`（当前构建中不可用，留空）。
+- 调用条件：需要发现可发送消息的对象——本会话子代理、同机其他 Claude 会话、云端会话、Remote Control 会话。
+
+**12. NotebookEdit**
+- 参数：`notebook_path*`、`cell_id`（replace/delete 时必需）、`new_source*`、`edit_mode`（replace / insert / delete）、`cell_type`（insert 时必需：code / markdown）。
+- 调用条件：编辑 Jupyter `.ipynb` 的单元格。须先用 Read 读过该 notebook。
+
+**13. Read**
+- 参数：`file_path*`（绝对路径）、`offset`（起始行）、`limit`（行数，默认最多 2000）、`pages`（PDF 页码范围，如 `"1-5"`，超过 10 页的 PDF 必填）。
+- 调用条件：读取文件、图片、PDF、notebook 内容。已知只需某段时只读该段，避免整文件倾倒。
+
+**14. ReportFindings**
+- 参数：`findings*`（数组，每项含 `file*`、`summary*`、`failure_scenario*`，以及 `category`、`line`、`short_summary`、`outcome`、`verdict`）、`level`（low / medium / high / xhigh / max）。
+- 调用条件：**仅当**当前 code-review 指令要求用该工具上报时；按严重度降序，无有效发现时传空数组，且不再重复打印为文本。
+
+**15. ScheduleWakeup**
+- 参数：`delaySeconds`（60–3600，`stop` 为真时省略）、`prompt`、`reason`、`noop`、`stop`。
+- 调用条件：仅在 `/loop` 动态模式（用户未给固定间隔）下自定节奏；等待外部且 harness 无法跟踪的状态时用短延迟，纯空闲回退用 1200–1800 秒；结束循环用 `stop: true`。
+
+**16. SendMessage**
+- 参数：`to*`（代理名 / "main" / agentId）、`message`、`summary`（5–10 词）、`notify_when_idle`（仅主会话可用的单次空闲通知）。
+- 调用条件：需要与子代理或其他会话通信时。纯文本输出对其他代理不可见，必须走此工具；不要用轮询或“你完成了吗”式消息。
+
+**17. Skill**
+- 参数：`skill*`（清单中的精确名称，含 `plugin:skill` 形式）、`args`。
+- 调用条件：任务命中某个已列出的技能（如 `code-review`、`dataviz`、`init`），或用户以 `/名称` 显式调用。不得猜测不存在的技能名。
+
+**18. TaskStop**
+- 参数：`task_id*`（后台任务 ID；代理也可用名称或 `name@team`）、`shell_id`（已废弃）。
+- 调用条件：需要终止长时间运行的后台命令或后台代理时。
+
+**19. WebFetch**
+- 参数：`url*`、`prompt*`（针对页面内容要回答的问题）。
+- 调用条件：抓取公开网页并抽取信息。对需登录/私有的 URL、localhost 及无点主机名会失败；跨域重定向会返回给我，需用新 URL 再调。
+
+**20. WebSearch**
+- 参数：`query*`、`allowed_domains`、`blocked_domains`。
+- 调用条件：需要检索最新或外部信息时（仅美国区结果）。回答后应以 markdown 链接列出所用来源。
+
+**21. Workflow**
+- 参数：`script`（内联脚本，须以纯字面量 `meta` 开头）、`scriptPath`（改用磁盘脚本，优先于 `script`）、`name`（已有工作流名，与 `script` 互斥）、`resumeFromRunId`、`args`；`title`、`description` 会被忽略。
+- 调用条件：**仅当**用户显式选择多代理编排（说了 “ultracode”、开启了会话级 ultracode、明确要求“用 workflow / 扇出代理”，或技能指令要求）。其他情况应先询问，不得自行推断授权。
+
+**22. Write**
+- 参数：`file_path*`（绝对路径）、`content*`。
+- 调用条件：新建文件，或完整覆盖一个**已经 Read 过**的文件。局部修改用 Edit；覆盖前先查看目标内容。
+
+---
+
+补充说明：以上调用都可能受当前权限模式约束，**被拒绝即视为用户否决，不会原样重试**。另外，系统提示中列出的“技能（skills）”和“代理类型（agent types）”不是独立工具，分别通过 `Skill` 和 `Agent` 调用。

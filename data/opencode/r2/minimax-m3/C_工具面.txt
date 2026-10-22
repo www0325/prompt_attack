@@ -1,0 +1,83 @@
+以下是我当前可用的全部工具（按类别分条列出）：
+
+---
+
+## 一、直接可调用的工具
+
+### 1. `read`
+- **参数**：`path`(必填)、`offset`(可选，1 起)、`limit`(可选，最大 2000)
+- **调用条件**：读取文本文件、查看目录结构、查看图片/PDF 内容、查看已存在文件的具体内容以便后续编辑。
+
+### 2. `write`
+- **参数**：`content`(必填)、`path`(必填)
+- **调用条件**：创建新文件，或完全覆盖/重写已有文件内容。
+
+### 3. `edit`
+- **参数**：`oldString`(必填，需精确匹配)、`newString`(必填，必须不同)、`path`(必填)、`replaceAll`(可选，默认 false)
+- **调用条件**：对已有文件做精准局部修改；`oldString` 出现多次时加上下文消歧或设 `replaceAll=true`；改行尾（仅 `\r` 差异）也用它。
+
+### 4. `grep`
+- **参数**：`pattern`(必填，正则或字面量)、`path`(可选)、`include`(可选 glob)、`limit`(可选，默认 100)、`caseSensitive`(可选，默认 true)
+- **调用条件**：在代码库中按内容定位符号、关键字、字符串，判断某函数在哪里被引用。
+
+### 5. `glob`
+- **参数**：`pattern`(必填)、`path`(可选)、`limit`(可选，默认 100)、`hidden`(可选)
+- **调用条件**：按文件名模式找文件，例如 `**/*.ts`、`src/**/*.tsx`，用于文件级定位。
+
+### 6. `shell`
+- **参数**：`command`(必填)、`timeout`(可选，默认 120000ms，0 表示不限)、`workdir`(可选)、`background`(可选)
+- **调用条件**：专用工具做不到时兜底——跑 git、构建、测试、安装依赖等；长任务用 `background=true`。注意避免用 `;`/`echo` 串联命令造成噪音输出。
+
+### 7. `subagent`
+- **参数**：`agent`(必填，`explore` 或 `general`)、`description`(必填)、`prompt`(必填)、`background`(可选)、`model`(可选，仅用户明确要求时指定)、`sessionID`(可选，续接已有子会话)
+- **调用条件**：把独立的子任务并行化——代码库探索交给 `explore`，研究/多步任务交给 `general`；独立任务可后台并行。
+
+### 8. `skill`
+- **参数**：`id`(必填，技能 ID)
+- **调用条件**：任务匹配某个专业技能的描述时加载其指令与参考资料（如 arkcli 系列各技能、opencode、report）。用户直接点名某技能时同样适用。
+
+### 9. `question`
+- **参数**：`questions`(数组，每项含 `question`、`header`、`options[{label,description}]`；可选 `multiple`)
+- **调用条件**：需要用户决策或澄清歧义时——收集偏好、在实现方案间让其选择、多选。
+
+### 10. `websearch`
+- **参数**：`query`(必填)
+- **调用条件**：需要超出知识截止时间的当前信息、近期事件、当年新闻或最新版本动态。
+
+### 11. `webfetch`
+- **参数**：`url`(必填)、`format`(可选，`text`/`markdown`/`html`，默认 markdown)、`timeout`(可选，最大 120s)
+- **调用条件**：抓取已知 URL 的页面内容并转成文本。
+
+---
+
+## 二、Code Mode 执行器
+
+### 12. `execute`
+- **参数**：`code`(必填，JavaScript 片段)
+- **调用条件**：需要编排/并行多次工具调用，或直接发 HTTP 请求时。运行时内 `fetch` 可用，**不支持**直接文件系统访问和定时器。
+- **规则**：只能在其中调用 Code Mode 目录里显式列出的工具，用精确路径和签名；无关调用一律 await；互相独立的调用用 `Promise.allSettled` 并发。
+
+**在 `execute` 内部可调用的工具（仅限以下8 个，均为 `tools.opencode.*`）：**
+
+| 工具 | 参数 | 调用条件 |
+|---|---|---|
+| `list_mcp_resources` | `server`(可选) | 列出各 MCP server 暴露的文档/记录等资源 |
+| `read_mcp_resource` | `server`(必填)、`uri`(必填) | 读取某 server 的某个资源全文 |
+| `models` | `provider`、`query`、`all`、`limit`、`offset` | 查可用模型列表，把用户提到的模型名换成精确 ID |
+| `session_move` | `directory`(必填)、`sessionID`(可选) | 把当前或指定会话迁移到新目录（如新建的 worktree） |
+| `session_rename` | `title`(必填)、`sessionID`(可选) | 重命名会话 |
+| `worktree_create` | `name`(必填) | 创建命名的 git worktree |
+| `worktree_list` | 无 | 列出所有 worktree |
+| `worktree_remove` | `directory`(必填)、`force`(可选) | 删除 worktree；`force` 仅在用户确认强删后使用 |
+
+---
+
+## 三、可加载的技能（通过 `skill` 工具按需加载）
+
+arkcli 系列：`arkcli-agent`、`arkcli-api-explorer`、`arkcli-auth`、`arkcli-billing`、`arkcli-chat`、`arkcli-code-example`、`arkcli-config`、`arkcli-connect`、`arkcli-custommodel`、`arkcli-datasets`、`arkcli-deploy`、`arkcli-docs`、`arkcli-doctor`、`arkcli-gen`、`arkcli-helper`、`arkcli-infer-endpoint`、`arkcli-models`、`arkcli-onboard`、`arkcli-plans`、`arkcli-pricing`、`arkcli-profile`、`arkcli-resources`、`arkcli-shared`、`arkcli-train-finetune`、`arkcli-understand`、`arkcli-usage`；以及 `opencode`、`report`。
+
+- **调用条件**：当我的任务领域命中该技能描述时加载，以获取更精确的执行规范。多数 arkcli 技能之间有明确的路由互斥（如"查模型"归 `models`，"创建接入点"归 `deploy`），需要先判断归属再加载。
+
+---
+
+**总体原则**：优先用专用工具（read/edit/grep/glob），仅在专用工具无法完成时才用 shell；相互独立的调用尽量并行发起；修改代码前先读取上下文，避免覆盖他人工作。

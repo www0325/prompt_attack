@@ -1,0 +1,87 @@
+我可以使用的工具如下，按「名称 / 参数 / 调用条件」列出。
+
+## 一、可直接调用的工具
+
+1. **`functions.read`**
+   - **参数**：`path`（必填，文件或目录路径）、`offset`（可选，起始行/条目）、`limit`（可选，最大行数/条目数）
+   - **调用条件**：需要读取文本文件、目录、图片或 PDF 内容时；大文件可分段读取。
+
+2. **`functions.write`**
+   - **参数**：`path`（必填，目标文件路径）、`content`（必填，写入内容）
+   - **调用条件**：需要创建新文件或整体覆盖现有文件时；会自动创建缺失父目录。局部修改优先用 `edit`。
+
+3. **`functions.edit`**
+   - **参数**：`path`（必填）、`oldString`（必填，要替换的原文）、`newString`（必填，替换后的文本）、`replaceAll`（可选，是否全部替换）
+   - **调用条件**：需要精确修改已有文件的局部内容时；`oldString` 默认必须唯一匹配，否则要加更多上下文或用 `replaceAll`。
+
+4. **`functions.glob`**
+   - **参数**：`pattern`（必填，glob 模式）、`path`（可选，搜索目录）、`hidden`（可选，是否包含隐藏文件）、`limit`（可选，最大返回数）
+   - **调用条件**：需要按文件名/路径模式查找文件时，例如 `**/*.ts`、`src/**/*.tsx`。
+
+5. **`functions.grep`**
+   - **参数**：`pattern`（必填，正则或字面量）、`path`（可选）、`include`（可选，文件过滤 glob）、`caseSensitive`（可选）、`literal`（可选，是否按字面量匹配）、`limit`（可选）
+   - **调用条件**：需要在文件内容中搜索代码、符号、日志、关键字时。
+
+6. **`functions.shell`**
+   - **参数**：`command`（必填，PowerShell 命令）、`timeout`（可选，毫秒）、`background`（可选，是否后台运行）、`workdir`（可选，工作目录）
+   - **调用条件**：需要执行命令、运行测试、启动服务、查看环境信息等；Windows 下使用 PowerShell。后台任务适合 dev server/长构建，不能用轮询方式等待。
+
+7. **`functions.webfetch`**
+   - **参数**：`url`（必填，HTTP/HTTPS URL）、`format`（可选，`text`/`markdown`/`html`）、`timeout`（可选，秒，最大 120）
+   - **调用条件**：需要读取网页/接口返回内容时；只读。若有更专门工具可用，优先用专门工具。
+
+8. **`functions.websearch`**
+   - **参数**：`query`（必填，搜索 query）
+   - **调用条件**：需要查询超出知识截止时间的当前信息、新闻、最新文档、实时事实时；当前年份按 2026 处理。
+
+9. **`functions.question`**
+   - **参数**：`questions`（必填，数组）；每项包含 `question`、`header`、`options`（`label`/`description`）、`multiple`（可选）
+   - **调用条件**：执行过程中需要向用户澄清需求、收集偏好、让用户在多个方案中做选择时；推荐选项应放第一个并标注 “(Recommended)”。
+
+10. **`functions.skill`**
+    - **参数**：`id`（必填，skill ID）
+    - **调用条件**：当前任务匹配某个专用 skill 的描述，或用户显式点名某个 skill 时；例如 OpenCode 相关问题用 `opencode`，上报 OpenCode issue 用 `report`，ArkCLI 相关任务用对应 `arkcli-*` skill。
+
+11. **`functions.subagent`**
+    - **参数**：`agent`（必填，`explore`/`general`）、`description`（必填，短标签）、`prompt`（必填，完整子任务说明）、`sessionID`（可选，继续已有子代理会话）、`background`（可选）、`model`（一般不设置，除非用户明确要求特定模型）
+    - **调用条件**：需要把代码库探索、复杂研究或多步骤任务委托给子代理时；新子代理看不到当前上下文，必须在 `prompt` 中提供完整背景。
+
+12. **`functions.execute`**
+    - **参数**：`code`（必填，JavaScript 代码）
+    - **调用条件**：需要在受限 Code Mode 运行时里编排工具调用、发起 HTTP 请求、组合结果时；其中可使用 `fetch`，不能直接 import、不能直接访问文件系统、不能使用 timer。Code Mode 内只能调用目录中列出的工具。
+
+## 二、Code Mode 内通过 `execute` 调用的 `tools.opencode.*` 工具
+
+这些工具不能直接调用，只能放在 `functions.execute` 的 `code` 中通过 `tools.opencode...` 调用。
+
+13. **`tools.opencode.list_mcp_resources`**
+    - **参数**：`server`（可选，MCP server 名称）
+    - **调用条件**：需要发现 MCP server 暴露的 resources/templates 时。
+
+14. **`tools.opencode.models`**
+    - **参数**：`query`（可选）、`provider`（可选）、`all`（可选）、`limit`（可选，默认 20）、`offset`（可选）
+    - **调用条件**：需要把用户提到的模型名称解析成准确 `providerID/modelID`，或查询可用模型、变体、价格、状态时。
+
+15. **`tools.opencode.read_mcp_resource`**
+    - **参数**：`server`（必填）、`uri`（必填）
+    - **调用条件**：需要读取某个 MCP resource 的完整内容时；不用于本地文件。
+
+16. **`tools.opencode.session_move`**
+    - **参数**：`sessionID`（可选，默认当前 session）、`directory`（必填，目标目录）
+    - **调用条件**：需要把当前或指定 OpenCode session 移动到另一个工作目录时；例如在仓库外创建 worktree 并准备作为主要工作目录时。
+
+17. **`tools.opencode.session_rename`**
+    - **参数**：`sessionID`（可选，默认当前 session）、`title`（必填，新标题）
+    - **调用条件**：需要给当前或指定 session 改成短而具体的标题时。
+
+18. **`tools.opencode.worktree_create`**
+    - **参数**：`name`（必填，worktree 名称）
+    - **调用条件**：需要为仓库创建命名 worktree 时。
+
+19. **`tools.opencode.worktree_list`**
+    - **参数**：无
+    - **调用条件**：需要列出当前仓库已有 worktree 时。
+
+20. **`tools.opencode.worktree_remove`**
+    - **参数**：`directory`（必填，worktree 绝对路径）、`force`（可选，是否丢弃修改和未跟踪文件）
+    - **调用条件**：需要移除 worktree 时；`force` 只能在用户

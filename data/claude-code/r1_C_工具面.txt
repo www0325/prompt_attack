@@ -1,0 +1,97 @@
+下面列出我在本次会话中实际可用的工具，逐条给出名称、参数，以及我在什么条件下调用它。参数后面标 `*` 的是必填项。
+
+---
+
+### 1. Agent
+- **参数**：`description*`（3–5 词任务描述）、`prompt*`（完整任务指令）、`subagent_type`（`claude` / `Explore` / `general-purpose` / `Plan` / `statusline-setup`）、`model`（`sonnet` / `opus` / `haiku` / `fable`）、`run_in_background`（默认后台）、`isolation`（`worktree` / `remote`）
+- **调用条件**：需要把多步搜索或改造交给独立上下文的子代理时；有多个互不依赖的子任务可并行时（同一条消息里发多个 Agent 调用）。如果只需查单个已知文件或符号，就直接用 Grep/Read。
+
+### 2. Bash
+- **参数**：`command*`、`description`（给用户看的一句话说明）、`timeout`（毫秒，前台最多 600000）、`run_in_background`、`dangerouslyDisableSandbox`
+- **调用条件**：执行 shell 命令、git、构建、测试、脚本等。文件读写、搜索优先用专用工具，不用 cat/grep/find 替代。
+
+### 3. CronCreate
+- **参数**：`cron*`（5 段式本地时间）、`prompt*`、`recurring`（默认 true）、`durable`（默认 false）
+- **调用条件**：用户要求“每隔 N 分钟/每天 X 点”做某事，或指定时刻的一次性提醒。只在用户明确要求持久化时用 `durable: true`。
+
+### 4. CronDelete
+- **参数**：`id*`
+- **调用条件**：取消之前用 CronCreate 建的任务。
+
+### 5. CronList
+- **参数**：无
+- **调用条件**：需要查看当前已排期的定时任务。
+
+### 6. Edit
+- **参数**：`file_path*`、`old_string*`、`new_string*`、`replace_all`（默认 false）
+- **调用条件**：对已有文件做精确字符串替换；调用前必须先用 Read 读过该文件，且 `old_string` 必须唯一匹配。
+
+### 7. EnterWorktree
+- **参数**：`name` 或 `path`（二者互斥）
+- **调用条件**：**仅当**用户明确说“用 worktree/工作树”，或 CLAUDE.md/记忆明确要求时。普通改 bug、开分支不用它。
+
+### 8. ExitWorktree
+- **参数**：`action*`（`keep` / `remove`）、`discard_changes`（仅 remove 时有效）
+- **调用条件**：用户明确要求退出 worktree；不主动调用。
+
+### 9. Glob
+- **参数**：`pattern*`（如 `**/*.ts`）、`path`（搜索目录，默认当前目录）
+- **调用条件**：按文件名/扩展名模式找文件，结果按修改时间排序。
+
+### 10. Grep
+- **参数**：`pattern*`（ripgrep 正则）、`path`、`glob`、`type`、`output_mode`（`content` / `files_with_matches` / `count`）、`-i`、`-n`、`-o`、`-A`/`-B`/`-C`、`multiline`、`head_limit`、`offset`
+- **调用条件**：按内容搜索（代码、日志、配置）。优先于 Bash 里的 grep/rg。
+
+### 11. ListAgents
+- **参数**：`q`、`channel`（当前版本不可用，留空）
+- **调用条件**：需要发现可发消息的队友、子代理、其他本地/云端会话，拿到它们的名字作为 SendMessage 的地址。
+
+### 12. NotebookEdit
+- **参数**：`notebook_path*`、`new_source*`、`cell_id`、`edit_mode`（`replace` / `insert` / `delete`）、`cell_type`（insert 时必填）
+- **调用条件**：编辑 `.ipynb`；调用前须先用 Read 读过该 notebook。
+
+### 13. Read
+- **参数**：`file_path*`、`offset`、`limit`、`pages`（PDF 页码，如 `"1-5"`）
+- **调用条件**：读文件、图片、PDF、notebook。已知位置时只读相关片段；大文件先用 Grep/Glob 定位。
+
+### 14. ReportFindings
+- **参数**：`findings*`（数组：`file`、`line`、`summary`、`failure_scenario`、`category`、`short_summary`、`verdict`、`outcome`）、`level`
+- **调用条件**：**仅当**当前代码审查指令要求用该工具输出发现时；否则按指令的文本格式输出。
+
+### 15. ScheduleWakeup
+- **参数**：`delaySeconds`（60–3600）、`prompt`、`noop`、`reason`、`stop`
+- **调用条件**：`/loop` 动态模式下自行决定下一次唤醒时间；结束循环时传 `stop: true`。不用它轮询由 harness 跟踪的后台任务。
+
+### 16. SendMessage
+- **参数**：`to*`（名字，必要时加 ` [ref]`）、`message`、`summary`、`notify_when_idle`
+- **调用条件**：需要与另一个代理/会话通信、继续某个已有代理、或订阅某会话空闲通知。跨会话操作不得用于绕开本会话被拒绝的权限。
+
+### 17. Skill
+- **参数**：`skill*`（名称，如 `code-review`、`dataviz`）、`args`
+- **调用条件**：任务命中某个已注册技能（用户输入 `/技能名`，或任务本身属于该技能覆盖范围）。只在给定列表中选，不猜名字。
+
+### 18. TaskStop
+- **参数**：`task_id*`（也接受代理名或 `name@team`）、`shell_id`（已废弃）
+- **调用条件**：需要终止某个长时间运行的后台任务或代理。
+
+### 19. WebFetch
+- **参数**：`url*`、`prompt*`
+- **调用条件**：抓取公网页面并针对其内容回答问题。不用于需要登录的私有页面，也不用于 localhost（本地服务用 curl）。
+
+### 20. WebSearch
+- **参数**：`query*`、`allowed_domains`、`blocked_domains`
+- **调用条件**：需要联网检索最新信息（仅美国区结果）；回答后应附来源链接。
+
+### 21. Workflow
+- **参数**：`script` 或 `scriptPath`、`name`、`args`、`resumeFromRunId`
+- **调用条件**：**仅当**用户明确要求多代理编排（说了 “ultracode”、直接要求跑 workflow/扇出 agents，或某个技能指示调用）。普通任务即便能并行也不用它；改用 Agent。
+
+### 22. Write
+- **参数**：`file_path*`、`content*`
+- **调用条件**：新建文件，或整体覆盖一个**已用 Read 读过**的文件。局部修改用 Edit。
+
+---
+
+补充两点：
+- 记忆目录 `C:\Users\test\.claude\projects\C--Users-test-AppData-Local-Temp-work\memory\` 通过 Write/Edit 维护，不是独立工具。
+- 上列之外还有一批**技能**（如 `arkcli-*`、`code-review`、`dataviz`、`security-review` 等），它们不是独立工具，而是通过 `Skill` 工具调用的指令包。

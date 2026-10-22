@@ -1,0 +1,89 @@
+以下是当前可使用的工具，按格式列出：
+
+1. **工具名称**：edit
+   **参数**：
+   - path (string, 必需)：要编辑的文件路径
+   - oldString (string, 必需)：文件中需替换的精确文本（需唯一匹配，除非设置`replaceAll: true`）
+   - newString (string, 必需)：替换`oldString`的新文本
+   - replaceAll (boolean, 可选，默认false)：是否替换文件中所有匹配的`oldString`
+   **调用条件**：需要对现有文件进行精确的文本替换操作，且`oldString`在文件中唯一，或需替换所有匹配项时。
+
+2. **工具名称**：glob
+   **参数**：
+   - pattern (string, 必需)：用于匹配文件路径的glob模式（如`"**/*.ts"`）
+   - path (string, 可选，默认当前工作目录)：搜索的目录
+   - hidden (boolean, 可选，默认false)：是否包含隐藏文件/目录
+   - limit (integer, 可选，默认100)：最大返回匹配的文件数（最小值1）
+   **调用条件**：按glob模式快速搜索文件路径，定位特定类型的文件或目录。
+
+3. **工具名称**：grep
+   **参数**：
+   - pattern (string, 必需)：要搜索的正则表达式或精确文本
+   - path (string, 可选，默认当前工作目录)：要搜索的文件或目录
+   - include (string, 可选)：过滤文件的glob模式（如`"*.js"`）
+   - literal (boolean, 可选，默认false)：是否将`pattern`视为精确文本而非正则表达式
+   - caseSensitive (boolean, 可选，默认true)：是否大小写敏感匹配
+   - limit (integer, 可选，默认100)：最大返回匹配行数（最小值1）
+   **调用条件**：在文件内容中搜索特定代码片段、文本模式，定位相关内容。
+
+4. **工具名称**：question
+   **参数**：
+   - questions (array, 必需)：每个问题包含：
+     - question (string, 必需)：具体问题内容
+     - header (string, 必需)：简短标签（≤30字符）
+     - options (array, 必需)：选项列表，每个选项含`label`（显示文本）和`description`（选项说明）
+     - multiple (boolean, 可选，默认false)：是否允许多选
+   **调用条件**：向用户收集偏好、需求或决策信息，需用户选择选项或确认信息时。
+
+5. **工具名称**：read
+   **参数**：
+   - path (string, 必需)：要读取的文件或目录路径
+   - offset (integer, 可选，默认1)：起始行号（1-based，最小值0）
+   - limit (integer, 可选，默认2000)：最大读取行数（最小值0）
+   **调用条件**：读取文件内容，或列出目录中的文件/子项。
+
+6. **工具名称**：shell
+   **参数**：
+   - command (string, 必需)：要执行的shell命令（Windows使用PowerShell）
+   - workdir (string, 可选，默认当前工作目录)：命令执行的工作目录
+   - timeout (integer, 可选，默认120000)：超时时间（毫秒，0表示禁用）
+   - background (boolean, 可选，默认false)：是否后台运行命令
+   **调用条件**：执行系统级命令，当其他工具无法完成复杂文件操作、系统管理等任务时。
+
+7. **工具名称**：skill
+   **参数**：
+   - id (string, 必需)：要加载的技能ID（如`"arkcli-deploy"`）
+   **调用条件**：需要加载特定技能到当前对话，当任务匹配该技能的描述（如模型部署、数据集管理）时。
+
+8. **工具名称**：subagent
+   **参数**：
+   - agent (string, 必需)：子代理类型，可选值为`"explore"`（代码探索）或`"general"`（通用任务）
+   - description (string, 必需)：任务简短标签（3-5词）
+   - prompt (string, 必需)：子代理需执行的任务描述
+   - model (string, 可选)：指定使用的模型（格式：`providerID/modelID`）
+   - sessionID (string, 可选)：继续之前的子代理会话（以`"ses"`开头）
+   - background (boolean, 可选，默认false)：是否后台运行
+   **调用条件**：启动子代理完成复杂任务，如探索代码库、执行多步复杂任务时。
+
+9. **工具名称**：webfetch
+   **参数**：
+   - url (string, 必需)：要获取内容的HTTP/HTTPS URL
+   - format (string, 可选，默认`"markdown"`)：返回格式，可选`"text"`/`"html"`
+   - timeout (number, 可选)：超时时间（秒，最大120）
+   **调用条件**：从HTTP/HTTPS URL获取内容，如读取网页、在线文档等。
+
+10. **工具名称**：websearch
+    **参数**：
+    - query (string, 必需)：搜索查询词
+    **调用条件**：从网络获取最新信息，超出知识库范围（如实时新闻、行业动态）时。
+
+11. **工具名称**：write
+    **参数**：
+    - path (string, 必需)：要写入的文件路径（缺失父目录会自动创建）
+    - content (string, 必需)：要写入的文件内容
+    **调用条件**：创建新文件，或完全覆盖现有文件的内容。
+
+12. **工具名称**：execute
+    **参数**：
+    - code (string, 必需)：要执行的JavaScript代码（在代码模式中运行）
+    **调用条件**：在代码模式中执行JavaScript，用于组合工具调用、处理结果或执行复杂逻辑时。

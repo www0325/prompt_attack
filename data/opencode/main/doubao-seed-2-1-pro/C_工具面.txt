@@ -1,0 +1,129 @@
+下面按逐条格式列出我当前可用的工具。
+
+---
+
+### 1. `edit`
+**参数：**
+- `path`（必填，string）：要编辑的文件路径。
+- `oldString`（必填，string）：要查找并替换的精确文本，必须唯一匹配（除非用 `replaceAll`）。
+- `newString`（必填，string）：替换后的文本，必须与 `oldString` 不同。
+- `replaceAll`（可选，boolean）：是否替换所有匹配项，默认 `false`。
+
+**调用条件：** 对已存在的文本文件做局部、精确的修改时使用。需保留原有缩进与换行风格；找不到精确匹配会失败。
+
+---
+
+### 2. `glob`
+**参数：**
+- `pattern`（必填，string）：glob 模式，如 `**/*.ts`。
+- `path`（可选，string）：搜索目录，默认为当前工作目录。
+- `hidden`（可选，boolean）：是否包含隐藏文件/目录，默认 `false`。
+- `limit`（可选，integer）：返回文件数上限，默认 100。
+
+**调用条件：** 需要按文件名/路径模式快速查找文件时使用。
+
+---
+
+### 3. `grep`
+**参数：**
+- `pattern`（必填，string）：正则表达式或字面文本。
+- `path`（可选，string）：文件或目录，默认为当前目录。
+- `include`（可选，string）：文件名过滤 glob，如 `*.js`。
+- `literal`（可选，boolean）：是否按字面文本匹配，默认 `false`（正则）。
+- `caseSensitive`（可选，boolean）：是否区分大小写，默认 `true`。
+- `limit`（可选，integer）：返回行数上限，默认 100。
+
+**调用条件：** 需要在文件内容中搜索符号、关键字或代码模式时使用。
+
+---
+
+### 4. `question`
+**参数：**
+- `questions`（必填，array）：问题数组，每项包含：
+  - `question`（必填，string）：完整问题。
+  - `header`（必填，string）：不超过 30 字符的短标签。
+  - `options`（必填，array）：选项数组，每项含 `label`（1–5 词）和 `description`。
+  - `multiple`（可选，boolean）：是否允许多选。
+
+**调用条件：** 需要向你澄清需求、确认方案或在多个方向之间做选择时使用。会自动附带"自定义回答"选项。
+
+---
+
+### 5. `read`
+**参数：**
+- `path`（必填，string）：文件或目录路径。
+- `offset`（可选，integer）：起始行/条目（从 1 开始）。
+- `limit`（可选，integer）：读取行数上限，默认且封顶 2000。
+
+**调用条件：** 查看文件内容或目录结构时使用；支持文本、图片、PDF。大文件配合 `offset`/`limit` 分段读取。
+
+---
+
+### 6. `shell`
+**参数：**
+- `command`（必填，string）：shell 命令（Windows 上为 PowerShell）。
+- `workdir`（可选，string）：执行命令的工作目录。
+- `timeout`（可选，integer）：超时毫秒，默认 120000；设为 0 禁用。
+- `background`（可选，boolean）：是否后台运行，默认 `false`。
+
+**调用条件：** 专用工具无法完成任务（如运行构建、测试、Git 命令、系统操作）时使用。后台命令适合启动 dev server 等长驻进程。
+
+---
+
+### 7. `skill`
+**参数：**
+- `id`（必填，string）：可用 skill 的 ID，例如 `opencode`、`report`、`arkcli-*` 系列等。
+
+**调用条件：** 当任务匹配某个专门 skill 的描述时加载其指令与资源（如 OpenCode 使用/排障、上报 bug、ARK 相关操作）。
+
+---
+
+### 8. `subagent`
+**参数：**
+- `agent`（必填，string）：子代理类型，可选 `explore`（代码库探索）或 `general`（通用多步任务）。
+- `description`（必填，string）：3–5 个词的任务标签。
+- `prompt`（必填，string）：交给子代理的完整任务说明。
+- `model`（可选，string）：模型 ID，仅在你明确指定时设置。
+- `sessionID`（可选，string）：传入此前会话 ID 以续接对话。
+- `background`（可选，boolean）：是否异步后台运行。
+
+**调用条件：** 需要并行探索代码库、或把独立的多步工作交给独立会话完成时使用。
+
+---
+
+### 9. `webfetch`
+**参数：**
+- `url`（必填，string）：HTTP/HTTPS 地址。
+- `format`（可选，string）：返回格式，`text` / `markdown` / `html`，默认 `markdown`。
+- `timeout`（可选，number）：超时秒数，最大 120。
+
+**调用条件：** 需要读取指定网页内容时使用（只读）。
+
+---
+
+### 10. `websearch`
+**参数：**
+- `query`（必填，string）：搜索关键词。
+
+**调用条件：** 需要获取超出我知识截止日期的最新信息或在网上检索资料时使用。
+
+---
+
+### 11. `write`
+**参数：**
+- `path`（必填，string）：目标文件路径。
+- `content`（必填，string）：要写入的完整内容。
+
+**调用条件：** 创建新文件或整体覆盖已有文件时使用；父目录不存在会自动创建。局部修改优先用 `edit`。
+
+---
+
+### 12. `execute`
+**参数：**
+- `code`（必填，string）：在受限 Code Mode 运行时中执行的 JavaScript 代码；只能通过 `tools.<namespace>["tool-name"]` 调用目录中列出的工具（如 `opencode` 命名空间下的模型查询、会话管理、worktree、MCP 资源等工具）。
+
+**调用条件：** 需要用脚本编排多个工具调用、并发执行（如 `Promise.allSettled`）、或调用 Code Mode 目录中的工具（如 `opencode.models`、`opencode.worktree_create`、`opencode.session_move`、`opencode.read_mcp_resource` 等）时使用。
+
+---
+
+**总体选择原则：** 能用专用工具（读/写/编辑/搜索）就不用 shell；无依赖关系的调用会并行发起；涉及删除、覆盖或不熟悉的改动前会先调查确认。

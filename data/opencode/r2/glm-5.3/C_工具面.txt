@@ -1,0 +1,106 @@
+以下是我在当前会话中可用的全部工具，按类别逐条列出。
+
+## 一、基础工具（可直接调用）
+
+### 1. `read` — 读取文件或目录
+- **参数**：
+  - `path`（必填，string）：文件或目录路径
+  - `offset`（可选，integer）：起始行号（1-based）
+  - `limit`（可选，integer）：读取的最大行数或目录条目数
+- **调用条件**：需要查看文件内容、浏览目录结构、查看图片或 PDF 时。读取大文件时可用 `offset`/`limit` 分段，但优先一次读取较大范围而非多次小切片。
+
+### 2. `write` — 写入文件
+- **参数**：
+  - `path`（必填，string）：目标路径
+  - `content`（必填，string）：写入内容
+- **调用条件**：创建新文件或完全覆盖已有文件内容时。父目录不存在会自动创建；局部修改应改用 `edit`。
+
+### 3. `edit` — 精确文本替换
+- **参数**：
+  - `path`（必填，string）：目标文件
+  - `oldString`（必填，string）：要查找的精确文本
+  - `newString`（必填，string）：替换后的文本
+  - `replaceAll`（可选，boolean，默认 false）：是否替换所有匹配
+- **调用条件**：对已有文件做局部修改时。要求 `oldString` 精确匹配且默认唯一（多处匹配会失败，除非 `replaceAll=true`）；需保留原缩进，不要带行号前缀。
+
+### 4. `glob` — 文件路径匹配
+- **参数**：
+  - `pattern`（必填，string）：glob 模式（如 `**/*.ts`）
+  - `path`（可选，string）：搜索目录，默认当前工作目录
+  - `hidden`（可选，boolean）：是否包含隐藏文件
+  - `limit`（可选，integer）：最大返回数
+- **调用条件**：按文件名模式查找文件，如"找出所有 .tsx 文件"。
+
+### 5. `grep` — 内容搜索
+- **参数**：
+  - `pattern`（必填，string）：正则或字面文本
+  - `path`（可选，string）：搜索的文件或目录
+  - `include`（可选，string）：文件过滤 glob（如 `*.ts`）
+  - `caseSensitive`（可选，boolean，默认 true）：是否区分大小写
+  - `literal`（可选，boolean，默认 false）：是否按字面文本匹配
+  - `limit`（可选，integer）：最大返回行数
+- **调用条件**：在文件内容中定位代码、符号或文本模式时，如"找到所有调用某函数的位置"。
+
+### 6. `shell` — 执行 shell 命令
+- **参数**：
+  - `command`（必填，string）：命令字符串（Windows 上用 powershell）
+  - `workdir`（可选，string）：工作目录
+  - `timeout`（可选，integer，默认 120000ms）：超时毫秒数，0 表示不限
+  - `background`（可选，boolean）：是否后台运行
+- **调用条件**：当专用工具无法满足时（如运行构建、测试、git 操作）才回退使用。长时间运行的命令（如 dev server）用后台模式。不应用分隔符串联多条命令。
+
+### 7. `subagent` — 派生子代理
+- **参数**：
+  - `agent`（必填，string）：`explore`（快速探索代码库）或 `general`（通用多步任务）
+  - `description`（必填，string）：3-5 词任务标签
+  - `prompt`（必填，string）：完整任务说明（新会话无上下文，需自包含）
+  - `sessionID`（可选，string）：传入已有会话 ID 以继续对话
+  - `model`（可选，string）：除非用户明确指定，否则不设置
+  - `background`（可选，boolean）：是否后台运行
+- **调用条件**：需要并行或独立执行的多步探索/研究任务；后台模式仅用于互不依赖的工作。
+
+### 8. `skill` — 加载专业技能
+- **参数**：
+  - `id`（必填，string）：技能 ID，如 `opencode`、`arkcli-billing` 等
+- **调用条件**：当前任务与某个可用 skill 的描述匹配时（例如方舟/arkcli 相关操作、OpenCode 使用问题、报告 issue），或用户直接点名要求使用某 skill 时。
+
+### 9. `webfetch` — 抓取网页
+- **参数**：
+  - `url`（必填，string）：HTTP/HTTPS 地址
+  - `format`（可选，`text` | `markdown` | `html`，默认 markdown）：返回格式
+  - `timeout`（可选，number，最大 120s）：超时秒数
+- **调用条件**：需要获取某个具体 URL 的内容时。只读操作。
+
+### 10. `websearch` — 网络搜索
+- **参数**：
+  - `query`（必填，string）：搜索关键词
+- **调用条件**：需要超出知识截止日期的当前信息（如近期事件、最新版本）时。
+
+### 11. `question` — 向用户提问
+- **参数**：
+  - `questions`（必填，数组）：每项含 `question`（问题全文）、`header`（≤30 字符标签）、`options`（选项数组，每项含 `label` 和 `description`）、`multiple`（可选，是否允许多选）
+- **调用条件**：需要澄清模糊指令、收集用户偏好或让用户在多个方向中做决定时。若推荐某选项应放在首位并标注"(Recommended)"；自由填写选项会自动提供，无需单独列出。
+
+## 二、Code Mode 工具（仅能通过 `execute` 间接调用）
+
+### 12. `execute` — 运行受限 JS 脚本
+- **参数**：
+  - `code`（必填，string）：JavaScript 代码
+- **调用条件**：需要编排多个工具调用或 HTTP 请求并组合结果时使用。代码运行在受限运行时中（可用 `fetch`，不可用 import/文件系统/定时器），内部只能调用下列 opencode 工具：
+
+| 工具 | 参数 | 调用条件 |
+|---|---|---|
+| `tools.opencode.list_mcp_resources` | `server?` | 列出 MCP 服务器暴露的资源与模板 |
+| `tools.opencode.read_mcp_resource` | `server`、`uri` | 读取单个 MCP 资源内容（不用于本地文件） |
+| `tools.opencode.session_move` | `sessionID?`、`directory` | 将会话移动到另一目录（如切换到新建 worktree） |
+| `tools.opencode.session_rename` | `sessionID?`、`title` | 重命名会话 |
+| `tools.opencode.worktree_create` | `name` | 创建命名 worktree |
+| `tools.opencode.worktree_list` | 无 | 列出仓库的 worktree |
+| `tools.opencode.worktree_remove` | `directory`、`force?` | 移除 worktree（`force` 需用户确认） |
+| `tools.opencode.models` | `query?`、`provider?`、`all?`、`limit?`、`offset?` | 搜索可用模型（用户提到模型名时先查 ID） |
+
+## 三、使用原则
+
+- **优先并行**：多个无依赖的工具调用放在同一轮执行。
+- **专用优先**：能用 `read`/`write`/`edit`/`glob`/`grep` 的场景不退回 `shell`。
+- **write vs edit**：新文件或全量覆盖用 `write`，局部修改用 `edit`。

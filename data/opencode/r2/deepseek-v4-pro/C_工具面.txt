@@ -1,0 +1,72 @@
+我当前可以直接调用的工具如下（均已定义参数与触发条件）。另外还有一个 `execute` 工具可运行受限 JavaScript 来调用 `opencode` 命名空间下的 8 个工具，会在最后单独列出。
+
+## 一、文件与代码操作类
+
+### 1. `read` — 读取文件/目录
+- **参数**：`path`（必填，文件或目录路径）、`offset`（起始行，默认1）、`limit`（最大行数，默认2000）
+- **条件**：需要查看文件内容、目录结构；支持文本、图片、PDF。用 grep 定位后读具体位置时也用它。
+
+### 2. `write` — 写文件
+- **参数**：`path`（必填）、`content`（必填，完整内容）
+- **条件**：创建新文件或完全覆盖已有文件；目录不存在会自动创建。
+
+### 3. `edit` — 精准编辑文件
+- **参数**：`path`（必填）、`oldString`（必填，要替换的原文本）、`newString`（必填）、`replaceAll`（可选，是否替换所有出现）
+- **条件**：对已有文件做局部/针对性修改；`oldString` 需唯一匹配（除非 `replaceAll=true`）。
+
+### 4. `glob` — 按模式搜索文件路径
+- **参数**：`pattern`（必填，glob 如 `**/*.ts`）、`path`（搜索目录，默认当前）、`hidden`（含隐藏文件）、`limit`（最大返回数）
+- **条件**：按文件名/路径模式定位文件。
+
+### 5. `grep` — 搜索文件内容
+- **参数**：`pattern`（必填，正则或字面文本）、`path`、`include`（文件过滤）、`literal`（是否字面匹配）、`caseSensitive`、`limit`
+- **条件**：在代码/文本中查找关键字、符号、正则匹配。
+
+### 6. `shell` — 执行 shell 命令
+- **参数**：`command`（必填）、`timeout`（毫秒）、`workdir`（工作目录）、`background`（是否后台运行）
+- **条件**：专用工具无法完成的操作（如运行脚本、构建、git 命令）；Windows 下用 PowerShell。避免用分隔符串联过多命令。
+
+## 二、网络工具
+
+### 7. `webfetch` — 抓取网页
+- **参数**：`url`（必填）、`format`（text/markdown/html，默认 markdown）、`timeout`（秒，最大120）
+- **条件**：获取 HTTP/HTTPS 网页内容。
+
+### 8. `websearch` — 网络搜索
+- **参数**：`query`（必填，搜索词）
+- **条件**：查询超出训练知识截止时间的最新信息（当前按 2026 年处理）。
+
+## 三、人工智能辅助工具
+
+### 9. `skill` — 加载技能
+- **参数**：`id`（必填，技能 ID）
+- **条件**：任务命中某个可用技能的描述时调用（如 arkcli 系列、opencode、report 等）。
+
+### 10. `subagent` — 派生子代理
+- **参数**：`agent`（explore/general）、`description`、`prompt`（必填）、`model`（除非用户显式指定否则不填）、`sessionID`（延续会话）、`background`
+- **条件**：需要并行或多步骤研究任务、代码库探索、同时执行多块工作。
+
+### 11. `question` — 向用户提问
+- **参数**：`questions`（数组，每项含 `question`、`header`、`options`、`multiple`）
+- **条件**：执行中需要澄清歧义、收集偏好、获取方向决策时。
+
+### 12. `execute` — 运行受限 JavaScript（Code Mode）
+- **参数**：`code`（必填，JS 代码）
+- **条件**：需要在受限运行时内编排工具调用或 HTTP 请求时。运行时内只能通过 `tools` 对象调用下方的 opencode 工具。
+
+## 四、`execute` 运行时内可用的 opencode 工具（8 个）
+
+| 工具 | 参数 | 触发条件 |
+|---|---|---|
+| `tools.opencode.list_mcp_resources` | `server?` | 列出 MCP 服务器暴露的文档/资源 |
+| `tools.opencode.models` | `query?`, `provider?`, `all?`, `limit?`, `offset?` | 搜索可用模型，把用户说的模型名转成精确引用 |
+| `tools.opencode.read_mcp_resource` | `server`, `uri` | 按 server+uri 读取单个 MCP 资源 |
+| `tools.opencode.session_move` | `sessionID?`, `directory` | 迁移会话到其他目录（省略则迁移当前） |
+| `tools.opencode.session_rename` | `sessionID?`, `title` | 重命名会话（省略则重命名当前） |
+| `tools.opencode.worktree_create` | `name` | 创建命名 worktree |
+| `tools.opencode.worktree_list` | (无) | 列出仓库的 worktree |
+| `tools.opencode.worktree_remove` | `directory`, `force?` | 删除 worktree（force 仅在用户确认强制删除时用） |
+
+---
+
+需要我针对某个具体工具展开更详细的用法，或示范一个实际调用场景吗？

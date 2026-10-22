@@ -1,0 +1,35 @@
+### 可用工具列表（按名称排序）
+1. **工具名称**：edit
+   - **参数**：path（string，必填，文件路径）、oldString（string，必填，待替换的精确文本）、newString（string，必填，替换后的文本）、replaceAll（boolean，可选，是否替换所有匹配，默认false）
+   - **调用条件**：需要对文件进行**精确局部文本替换**（仅修改部分内容）时调用，需确保oldString在文件中唯一，不唯一时需增加上下文或设置replaceAll=true。
+
+2. **工具名称**：glob
+   - **参数**：pattern（string，必填，Glob匹配模式，如`**/*.ts`）、path（string，可选，搜索目录，默认当前工作目录）、hidden（boolean，可选，是否包含隐藏文件，默认false）、limit（integer，可选，返回最大文件数，默认100）
+   - **调用条件**：需要按Glob模式搜索匹配的文件路径（如查找特定类型/名称的文件）时调用。
+
+3. **工具名称**：grep
+   - **参数**：pattern（string，必填，搜索的正则表达式或精确文本）、path（string，可选，搜索的文件/目录，默认当前目录）、include（string，可选，Glob模式过滤文件）、literal（boolean，可选，是否将pattern视为精确文本而非正则，默认false）、caseSensitive（boolean，可选，是否大小写敏感，默认true）、limit（integer，可选，返回最大匹配行数，默认100）
+   - **调用条件**：需要在文件内容中搜索特定关键词、代码片段或正则模式（定位代码/符号位置）时调用。
+
+4. **工具名称**：question
+   - **参数**：questions（array，必填，每个问题包含`question`（问题内容）、`header`（简短标签）、`options`（选项列表），`multiple`（可选，是否允许多选））
+   - **调用条件**：需要向用户询问信息、澄清模糊需求、收集偏好或提供选择（如确认操作方向、选择参数）时调用。
+
+5. **工具名称**：read
+   - **参数**：path（string，必填，文件或目录路径）、offset（integer，可选，起始读取行号，1-based，默认0）、limit（integer，可选，最大读取行数/条目数，默认2000）
+   - **调用条件**：需要读取文件内容或目录条目（查看文件/目录结构）时调用，大文件可通过offset和limit分段读取。
+
+6. **工具名称**：shell
+   - **参数**：command（string，必填，要执行的Shell命令）、workdir（string，可选，命令执行的工作目录，默认当前）、timeout（integer，可选，超时毫秒，默认120000）、background（boolean，可选，是否后台运行，默认false）
+   - **调用条件**：需要执行Shell命令且其他工具（如edit/grep）无法完成时调用，优先使用专用工具，避免简单操作用Shell。
+
+7. **工具名称**：skill
+   - **参数**：id（string，必填，技能ID，如`arkcli-chat`/`arkcli-deploy`等）
+   - **调用条件**：需要加载特定技能的专用指令（如模型接入、账单查询等专项任务）时调用。
+
+8. **工具名称**：subagent
+   - **参数**：agent（string，必填，子代理类型，如`explore`（代码探索）/`general`（通用多任务））、description（string，必填，任务简短描述（3-5字））、prompt（string，必填，子代理的具体任务内容）、sessionID（string，可选，继续之前的子代理会话）、background（boolean，可选，是否后台运行，默认false）
+   - **调用条件**：需要让专用子代理完成特定任务（如快速探索代码库、处理复杂多步骤任务）时调用。
+
+9. **工具名称**：webfetch
+   - **参数**：url（string
